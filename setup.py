@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='pyticc',
-    version='0.0.2',
+    version='0.0.3',
     packages=setuptools.find_packages(),
     include_package_data=True,
     description='Python module to interface with Texas Instruments CCx Sub-1Ghz RF transceivers over SPI.',

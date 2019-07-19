@@ -392,7 +392,7 @@ class CC1101(CCAddr, CCBase):
             return data
 
     def send_data(self, bytes):
-        self.enable_rf()
+        self.enable_tx()
         marcstate = self.marcstate()
         payload = []
 
