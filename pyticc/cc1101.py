@@ -129,12 +129,6 @@ class CC1101(CCAddr, CCBase):
 
     # config/setup
     # ---------------------------------
-    def tx_power(self, value):
-        """Set tx power to value."""
-        if value > 0xff or value < 0:
-            raise ValueError("Invalid Tx Power setting")
-
-        self.write_byte(self.PATABLE, value)
 
     def base_frequency(self, freq=None):
         """
@@ -198,38 +192,7 @@ class CC1101(CCAddr, CCBase):
             self.register_write("MDMCFG2", 'MOD_FORMAT[2:0]', schemes[modulation])
             return self.modulation()
 
-    def packet_mode(self, value=None):
-        pass
-
-    def packet_preamble(self, value=None):
-        """Get or set the packet preamble word."""
-        if value is None:
-            return self.register_value("")
-        pass
-
-    def packet_syncword(self, value=None):
-        """
-        Get or set the packetsync word.
-
-        args:
-            - [optional] word (str) like 'FAFA'
-        returns:
-            - str
-        """
-
-        if value is None:
-            s1 = self.read_byte(self.SYNC1)
-            s0 = self.read_byte(self.SYNC0)
-            byte = s1 << 8
-            byte = byte | s0
-            word = "{:x}".format(s1).zfill(2).upper() + "{:x}".format(s0).zfill(2).upper()
-            return word
-
-        self._writeSingleByte(self.SYNC1, int(value[:2], 16))
-        self._writeSingleByte(self.SYNC0, int(value[2:], 16))
-        return self.packet_sync()
-
-    def packet_config_length(self, mode=None):
+    def packet_length(self, mode=None):
         """
         Get or set packet length mode.
 
@@ -254,7 +217,7 @@ class CC1101(CCAddr, CCBase):
             return None
         else:
             self.register_write("PKTCTRL0", 'LENGTH_CONFIG[1:0]', modes[mode])
-            return self.packet_config_length()
+            return self.packet_length()
 
     def channel(self, channel=None):
         """
@@ -299,13 +262,39 @@ class CC1101(CCAddr, CCBase):
         return self.baud_rate()
 
     def rx_bandwidth(self, value=None):
-        """Get or set receive filter bandwidth."""
+        """
+        Get or set receive filter bandwidth.
 
-        mdmcfg4 = self.register_value('MDMCFG4')
+        args: [optional] Hz (int) [58000|100000|232000|325000|540000|812000]
+        """
+
+        def write_this_bw(bw_e, bw_m):
+            self.register_write('MDMCFG4', 'CHANBW_M[1:0]', bw_m)
+            self.register_write('MDMCFG4', 'CHANBW_E[1:0]', bw_e)
+
+        if value is not None and value not in [58000,100000,232000,325000,540000,812000]:
+            raise ValueError("Invalid receive bandwidth setting.")
+
         if value is None:
-            return self.osc_freq / 8 * (4 + mdmcfg4['CHANBW_M[1:0]']) * math.pow(2, mdmcfg4['CHANBW_E[1:0]'])
+            mdmcfg4 = self.register_value('MDMCFG4')
+            bwm = mdmcfg4['CHANBW_M[1:0]']
+            bwe = mdmcfg4['CHANBW_E[1:0]']
+            return int(self.osc_freq / 8 * (4 + bwm) * math.pow(2, bwe))
 
-        # TODO: ability to set BW
+        if value == 58000:
+            write_this_bw(0x03,0x03)
+        elif value == 100000:
+            write_this_bw(0x03,0x00)
+        elif value == 232000:
+            write_this_bw(0x01,0x03)
+        elif value == 325000:
+            write_this_bw(0x01,0x01)
+        elif value == 540000:
+            write_this_bw(0x00,0x02)
+        elif value == 812000:
+            write_this_bw(0x00,0x00)
+
+        return self.rx_bandwidth()
 
     def manchester(self, value=None):
         """Get or set manchester encoding"""
@@ -416,13 +405,11 @@ class CC1101(CCAddr, CCBase):
 
         data = {}
         spec = self._register_schema(name)
-        for attr_name, attr_spec in spec.items():
-            value = self._extract_val_from_byte(attr_spec, byte)
+        for attr_name, attr_schema in spec.items():
+            value = self._extract_val_from_byte(byte, attr_schema)
             data[attr_name] = value
 
         return data
-
-
 
     def _register_schema(self, name):
         """

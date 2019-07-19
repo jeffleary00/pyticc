@@ -37,6 +37,7 @@ cc.flush_tx_fifo()
 cc.base_frequency(433)
 cc.modulation('OOK')
 cc.packet_config_length('PKT_LEN_VARIABLE')
+cc.packet_syncword('FAFA')
 
 cc.manchester(1)
 cc.whitening(1)

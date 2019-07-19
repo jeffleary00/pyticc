@@ -15,4 +15,7 @@ setuptools.setup(
     author='Jeff Leary',
     author_email='sillymonkeysoftware@gmail.com',
     url='https://github.com/jeffleary00/pyticc',
+    install_requires=[
+        'spidev'
+    ],
 )
