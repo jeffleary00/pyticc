@@ -391,6 +391,69 @@ class CC1101(CCAddr, CCBase):
 
             return data
 
+    def send_data(self, bytes):
+        self.enable_rf()
+        marcstate = self.marcstate()
+        payload = []
+
+        if len(bytes) == 0:
+            raise ValueError("Must include payload")
+
+        while ((marcstate & 0x1F) != 0x0D):
+            if marcstate == 0x11:
+                self.flush_rx_fifo()
+
+            marcstate = self.marcstate()
+
+
+        sending_mode = self.packet_length()
+        data_len = len(bytes)
+
+        if sending_mode == "PKT_LEN_FIXED":
+            if data_len > self.read_byte(self.PKTLEN):
+                raise ValueError("Payload too big.")
+
+            if self.register_value("PKTCTRL1")['APPEND_STATUS']:
+                payload.append(self.read_byte(self.ADDR))
+
+            payload.extend(bytes)
+            payload.extend([0] * (self.read_byte(self.PKTLEN) - len(payload)))
+
+        elif sending_mode == "PKT_LEN_VARIABLE":
+            payload.append(data_len)
+
+            if self.register_value("PKTCTRL1")['APPEND_STATUS']:
+                payload.append(self.read_byte(self.ADDR))
+                payload[0] += 1
+
+            payload.extend(bytes)
+
+        elif sending_mode == "PKT_LEN_INFINITE":
+            # ToDo
+            raise Exception("MODE NOT IMPLEMENTED")
+
+        self.write_burst(self.TXFIFO, payload)
+        self.cmd_delay(2000)
+        self.enable_tx()
+        marcstate = self.marcstate()
+
+        if marcstate not in [0x13, 0x14, 0x15]:  # RX, RX_END, RX_RST
+            self.sidle()
+            self.flush_tx_fifo()
+            self.enable_rx()
+
+            return False
+
+        remaining = self.read_byte(self.TXBYTES) & 0x7F
+        while remaining != 0:
+            self.cmd_delay(100)
+            remaining =  self.read_byte(self.TXBYTES) & 0x7F
+
+        if (self.read_byte(self.TXBYTES) & 0x07) == 0:
+            return True
+        else:
+            return False
+
 
     # PRIVATE class methods
     # ---------------------------------
