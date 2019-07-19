@@ -36,9 +36,8 @@ cc.flush_tx_fifo()
 ```
 cc.base_frequency(433)
 cc.modulation('OOK')
-cc.packet_config_length('PKT_LEN_VARIABLE')
-cc.packet_syncword('FAFA')
-
+cc.packet_length('PKT_LEN_VARIABLE')
+cc.rx_bandwidth(325000)
 cc.manchester(1)
 cc.whitening(1)
 ```
@@ -54,14 +53,14 @@ Query by address, or class attribute name.
 ```
 cc.register_value(0x10)
 {
-  'CHANBW_E': 1,
-  'CHANBW_M': 3,
-  'DRATE_E': 8
+  'CHANBW_E[1:0]': 1,
+  'CHANBW_M[1:0]': 3,
+  'DRATE_E[3:0]': 8
 }
 
-cc.register_write('MDMCFG4', 'CHANBW_M', 0x02)
+cc.register_write('MDMCFG4', 'CHANBW_M[1:0]', 0x02)
 
-cc.register_write('MDMCFG4', 'CHANBW_M', '101')
+cc.register_write('MDMCFG4', 'CHANBW_M[1:0]', '101')
 ```
 
 ## To Do
