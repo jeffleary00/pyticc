@@ -322,6 +322,31 @@ class CC1101(CCAddr, CCBase):
             chanspc_e = self.register_value("MDMCFG1")['CHANSPC_E[1:0]']
             return (self.osc_freq/math.pow(2,18)) * (256 + chanspc_m) * (math.pow(2, chanspc_e))
 
+    def sync_word(self, value=None):
+        """Get or set packet sync word"""
+
+        if value is None:
+            s1 = "{:x}".format(self.read_byte('SYNC1')).upper()
+            s0 = "{:x}".format(self.read_byte('SYNC0')).upper()
+            return s1 + s0
+
+        if type(value) is str:
+            if len(list(value)) != 4:
+                raise ValueError("Must be 4 letter sync word like 'FAFA'.")
+
+            s1 = int(list(value)[:2], 16)
+            s0 = int(list(value)[2:], 16)
+        elif type(value) is int:
+            s0 = value & 0xFF
+            s1 = value >> 8
+        else:
+            raise ValueError("Unexpected sync word type.")
+
+        self.register_write('SYNC1', 'SYNC[15:8]', s1)
+        self.register_write('SYNC0', 'SYNC[7:0]', s0)
+        return self.sync_word()
+
+
     # config register convenience methods
     # ---------------------------------
     def register_value(self, name):
