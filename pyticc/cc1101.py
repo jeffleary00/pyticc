@@ -142,19 +142,19 @@ class CC1101(CCAddr, CCBase):
             raise ValueError("Unsupported carrier freq '%d'" % freq)
 
         if freq is None:
-            chan = self.register_value("CHANNR")['CHAN[7:0]']
             f2 = self.read_byte(self.FREQ2) << 16
             f1 = self.read_byte(self.FREQ1) << 8
             f0 = self.read_byte(self.FREQ0)
             freq = f2 + f1 + f0
+            chan = self.register_value("CHANNR")['CHAN[7:0]']
             chanspc_m = self.register_value("MDMCFG0")['CHANSPC_M[7:0]']
             chanspc_e = self.register_value("MDMCFG1")['CHANSPC_E[1:0]']
 
-            r = self.osc_freq/math.pow(2, 16) * (freq + chan * (( 256 + chanspc_m) * math.pow(2,chanspc_e)))
+            r = (self.osc_freq/math.pow(2, 16)) * (freq + chan * (( 256 + chanspc_m) * math.pow(2,(chanspc_e - 2))))
             return r
 
         self.sidle()
-        carrier = int(0x10000 * (freq * 10000)/ self.osc_freq)
+        carrier = int(0x10000 * (freq * 1000000)/ self.osc_freq)
         data = [hex(carrier >> i & 0xff) for i in (16,8,0)]
         self.write_byte(self.FREQ0, int(data[2], 16))
         self.write_byte(self.FREQ1, int(data[1], 16))
@@ -326,16 +326,16 @@ class CC1101(CCAddr, CCBase):
         """Get or set packet sync word"""
 
         if value is None:
-            s1 = "{:x}".format(self.read_byte('SYNC1')).upper()
-            s0 = "{:x}".format(self.read_byte('SYNC0')).upper()
+            s1 = "{:x}".format(self.read_byte('SYNC1')).zfill(2).upper()
+            s0 = "{:x}".format(self.read_byte('SYNC0')).zfill(2).upper()
             return s1 + s0
 
         if type(value) is str:
             if len(list(value)) != 4:
                 raise ValueError("Must be 4 letter sync word like 'FAFA'.")
 
-            s1 = int(list(value)[:2], 16)
-            s0 = int(list(value)[2:], 16)
+            s1 = int("".join(list(value)[:2]), 16)
+            s0 = int("".join(list(value)[2:]), 16)
         elif type(value) is int:
             s0 = value & 0xFF
             s1 = value >> 8
@@ -345,6 +345,20 @@ class CC1101(CCAddr, CCBase):
         self.register_write('SYNC1', 'SYNC[15:8]', s1)
         self.register_write('SYNC0', 'SYNC[7:0]', s0)
         return self.sync_word()
+
+    def rssi_offset(self):
+        """Get RSSI offset for this product. CC1101 is fixed."""
+
+        return 74
+
+    def rssi(self):
+        value = self.read_byte(self.RSSI)
+        if value >= 128:
+            dbm = ((value - 256) /2) - self.rssi_offset()
+        else:
+            dbm = (value / 2) - self.rssi_offset()
+
+        return dbm
 
 
     # config register convenience methods
