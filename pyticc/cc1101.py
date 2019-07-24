@@ -107,6 +107,16 @@ class CC1101(CCAddr, CCBase):
     """
 
     def __init__(self, *args, **kwargs):
+        """
+        Instantiation
+
+        args:
+            none
+
+        keyword-args:
+            - osc_freq: (freq in hz for crystal osc. default=26Mhz)
+        """
+
         self.osc_freq = 26000000
 
         super(CC1101, self).__init__(args, kwargs)
@@ -119,7 +129,13 @@ class CC1101(CCAddr, CCBase):
     # basics
     # ---------------------------------
     def sanity_check(self):
-        """Perform basic sanity check."""
+        """
+        Perform basic sanity check.
+        Will throw errors if partnum and version are not correct.
+
+        args: none
+        returns: none
+        """
 
         part_num = self.read_byte('PARTNUM')
         component_ver = self.read_byte('VERSION')
@@ -196,8 +212,10 @@ class CC1101(CCAddr, CCBase):
         """
         Get or set packet length mode.
 
-        args: [optional] str(PKT_LEN_FIXED|PKT_LEN_VARIABLE|PKT_LEN_INFINITE)
+        args: [optional] str(PKT_LEN_FIXED|PKT_LEN_VARIABLE)
         returns: str
+
+        note: PKT_LEN_INFINITE is not currently supported
         """
 
         modes = {
@@ -223,8 +241,8 @@ class CC1101(CCAddr, CCBase):
         """
         Get or set CC1101 channel byte
 
-        args: [optional] byte value int
-        returns: byte value
+        args: [optional] int(byte-value)
+        returns: int byte-value
         """
 
         if channel is not None and type(channel) is not int:
@@ -265,7 +283,8 @@ class CC1101(CCAddr, CCBase):
         """
         Get or set receive filter bandwidth.
 
-        args: [optional] Hz (int) [58000|100000|232000|325000|540000|812000]
+        args: [optional] (int) [58000|100000|232000|325000|540000|812000] Hz
+        returns: int
         """
 
         def write_this_bw(bw_e, bw_m):
@@ -297,7 +316,12 @@ class CC1101(CCAddr, CCBase):
         return self.rx_bandwidth()
 
     def manchester(self, value=None):
-        """Get or set manchester encoding"""
+        """
+        Get or set manchester encoding
+
+        args: [optional] int-boolean (0|1)
+        returns: int-boolean
+        """
 
         if value is None:
             return self.register_value("MDMCFG2")['MANCHESTER_EN']
@@ -306,7 +330,12 @@ class CC1101(CCAddr, CCBase):
         return self.manchester()
 
     def whitening(self, value=None):
-        """Get or set whitening."""
+        """
+        Get or set data whitening.
+
+        args: [optional] int-boolean (0|1)
+        returns: int-boolean
+        """
 
         if value is None:
             return self.register_value('PKTCTRL0')['WHITE_DATA']
@@ -314,8 +343,14 @@ class CC1101(CCAddr, CCBase):
         self.register_write('PKTCTRL0', 'WHITE_DATA', value)
         return self.whitening()
 
-    def channel_spacing(self, value=None):
-        """Get or set channel spacing"""
+    def channel_spacing(self):
+        """
+        Get channel spacing.
+        TODO: Add option to SET channel spacing.
+
+        args: none
+        returns: int
+        """
         chan = self.register_value("CHANNR")['CHAN']
         if value is None:
             chanspc_m = self.register_value("MDMCFG0")['CHANSPC_M[7:0]']
@@ -323,7 +358,12 @@ class CC1101(CCAddr, CCBase):
             return (self.osc_freq/math.pow(2,18)) * (256 + chanspc_m) * (math.pow(2, chanspc_e))
 
     def sync_word(self, value=None):
-        """Get or set packet sync word"""
+        """
+        Get or set packet sync word
+
+        args: [optional] str (like '0000'|'FAFA', etc)
+        returns: str
+        """
 
         if value is None:
             s1 = "{:x}".format(self.read_byte('SYNC1')).zfill(2).upper()
@@ -347,11 +387,23 @@ class CC1101(CCAddr, CCBase):
         return self.sync_word()
 
     def rssi_offset(self):
-        """Get RSSI offset for this product. CC1101 is fixed."""
+        """
+        Get RSSI offset for this product. CC1101 is fixed.
+
+        args: none
+        returns: int
+        """
 
         return 74
 
     def rssi(self):
+        """
+        Read RSSI dbm signal measurement.
+
+        args: none
+        returns: int
+        """
+
         value = self.read_byte(self.RSSI)
         if value >= 128:
             dbm = ((value - 256) /2) - self.rssi_offset()
@@ -380,6 +432,8 @@ class CC1101(CCAddr, CCBase):
         """
         Update specific attribute in a register.
 
+        Register and Attribute names come from the Ti CC1101 spec sheet.
+
         args:
             - register name (str)
             - attribute name (str)
@@ -403,6 +457,8 @@ class CC1101(CCAddr, CCBase):
     # read/write data
     # ---------------------------------
     def recv_data(self):
+        """Receive FIFO data"""
+
         self.enable_rx()
         rx_bytes_val = self.read_byte(self.RXBYTES)
 
@@ -431,6 +487,14 @@ class CC1101(CCAddr, CCBase):
             return data
 
     def send_data(self, bytes):
+        """
+        Send data to TX FIFO.
+
+        args:
+          - list of bytes
+        returns:
+            none
+        """
         self.enable_tx()
         marcstate = self.marcstate()
         payload = []

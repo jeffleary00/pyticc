@@ -3,7 +3,20 @@ import time
 from pyticc.utils import byte_bit_value, bit_into_byte
 
 class SPIBase(object):
+
     def __init__(self, *args, **kwargs):
+        """
+        Instantiation
+
+        args:
+            none
+            
+        keyword-args:
+            - spi_device:
+            - spi_bus:
+            - spi_speed
+        """
+
         self.spi_device = 0
         self.spi_bus = 0
         self.spi_speed = 50000

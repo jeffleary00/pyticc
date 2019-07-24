@@ -34,6 +34,7 @@ def byte_bit_value(byte, schema):
     mask = 0xFF >> (shift + index)
     return byte >> shift & mask
 
+
 def bit_into_byte(byte, schema, value):
     """
     Update bits in a byte to get new value.
