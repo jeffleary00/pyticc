@@ -38,6 +38,7 @@ cc.base_frequency(433)
 cc.modulation('OOK')
 cc.packet_length('PKT_LEN_VARIABLE')
 cc.rx_bandwidth(325000)
+cc.sync_word('FAFA')
 cc.manchester(1)
 cc.whitening(1)
 ```
